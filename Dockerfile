@@ -1,0 +1,1 @@
+FROM pytorch/pytorch:2.3.0-cpu
