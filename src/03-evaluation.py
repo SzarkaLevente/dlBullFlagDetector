@@ -1,6 +1,7 @@
 import os
+import json
 import random
-from typing import Tuple
+from typing import Tuple, List
 
 import numpy as np
 import torch
@@ -8,7 +9,7 @@ import torch.nn as nn
 from sklearn.metrics import confusion_matrix, classification_report
 
 import config as config
-from utils import setup_logger
+from utils import setup_logger, load_meta
 
 logger = setup_logger()
 
@@ -39,7 +40,7 @@ class LSTMFlagClassifier(nn.Module):
         self.fc = nn.Linear(hidden_size, num_classes)
 
     def forward(self, x):
-        output, (h_n, c_n) = self.lstm(x)
+        _, (h_n, _) = self.lstm(x)
         last_hidden = h_n[-1]
         logits = self.fc(last_hidden)
         return logits
@@ -55,13 +56,17 @@ def load_test_data(data_dir: str) -> Tuple[np.ndarray, np.ndarray]:
     logger.info(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
     return X_test, y_test
 
+def _class_names_from_map(class_map: dict) -> List[str]:
+    inv = {int(v): str(k) for k, v in class_map.items()}
+    n = len(inv)
+    return [inv.get(i, f"class_{i}") for i in range(n)]
+
 def evaluate_on_numpy(
     model: nn.Module,
     X: np.ndarray,
     y: np.ndarray,
     device: torch.device,
 ) -> Tuple[float, float, np.ndarray, np.ndarray]:
-    
     criterion = nn.CrossEntropyLoss()
     model.eval()
 
@@ -77,7 +82,7 @@ def evaluate_on_numpy(
     total = y_t.size(0)
     acc = correct / total if total > 0 else 0.0
 
-    return loss.item(), acc, y_t.cpu().numpy(), preds.cpu().numpy()
+    return float(loss.item()), float(acc), y_t.cpu().numpy(), preds.cpu().numpy()
 
 def evaluate():
     logger.info("=== Starting evaluation on test set ===")
@@ -86,16 +91,23 @@ def evaluate():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
 
+    meta = load_meta(config.DATA_DIR)
+    class_map = meta.get("class_map", {})
+    if not isinstance(class_map, dict) or len(class_map) == 0:
+        raise ValueError("meta.json does not contain a valid class_map")
+
+    class_names = _class_names_from_map(class_map)
+    num_classes = len(class_names)
+    labels = list(range(num_classes))
+
     X_test, y_test = load_test_data(config.DATA_DIR)
 
-    input_size = X_test.shape[2]
-    num_classes = int(np.max(y_test)) + 1
-
+    input_size = int(X_test.shape[2])
     model = LSTMFlagClassifier(
         input_size=input_size,
         hidden_size=32,
         num_layers=1,
-        num_classes=num_classes,
+        num_classes=int(num_classes),
         dropout=0.1,
     ).to(device)
 
@@ -110,20 +122,24 @@ def evaluate():
     state_dict = torch.load(config.MODEL_SAVE_PATH, map_location=device)
     model.load_state_dict(state_dict)
 
-    test_loss, test_acc, y_true, y_pred = evaluate_on_numpy(
-        model, X_test, y_test, device
-    )
+    test_loss, test_acc, y_true, y_pred = evaluate_on_numpy(model, X_test, y_test, device)
 
     logger.info(f"Test loss: {test_loss:.4f}, Test accuracy: {test_acc:.4f}")
 
-    cm = confusion_matrix(y_true, y_pred)
+    cm = confusion_matrix(y_true, y_pred, labels=labels)
     logger.info(f"Confusion matrix:\n{cm}")
 
-    report = classification_report(y_true, y_pred, digits=4, zero_division=0)
+    report = classification_report(
+        y_true,
+        y_pred,
+        labels=labels,
+        target_names=class_names,
+        digits=4,
+        zero_division=0,
+    )
     logger.info(f"Classification report:\n{report}")
 
     logger.info("=== Evaluation on test set completed ===")
-
 
 if __name__ == "__main__":
     evaluate()

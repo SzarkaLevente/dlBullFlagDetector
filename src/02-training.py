@@ -1,4 +1,5 @@
 import os
+import json
 import random
 from typing import Tuple
 
@@ -8,7 +9,7 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 
 import config as config
-from utils import setup_logger
+from utils import setup_logger, load_meta
 
 logger = setup_logger()
 
@@ -39,14 +40,12 @@ class LSTMFlagClassifier(nn.Module):
         self.fc = nn.Linear(hidden_size, num_classes)
 
     def forward(self, x):
-        output, (h_n, c_n) = self.lstm(x)
+        _, (h_n, _) = self.lstm(x)
         last_hidden = h_n[-1]
         logits = self.fc(last_hidden)
         return logits
 
-def load_train_val_data(
-    data_dir: str,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def load_train_val_data(data_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     processed_dir = os.path.join(data_dir, "processed")
 
     logger.info(f"Loading processed data from {processed_dir}")
@@ -60,7 +59,6 @@ def load_train_val_data(
     logger.info(f"X_val shape:   {X_val.shape}, y_val shape:   {y_val.shape}")
 
     return X_train, y_train, X_val, y_val
-
 
 def make_dataloaders(
     X_train: np.ndarray,
@@ -92,7 +90,6 @@ def make_dataloaders(
 def count_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-
 def train_one_epoch(
     model: nn.Module,
     data_loader: DataLoader,
@@ -121,10 +118,9 @@ def train_one_epoch(
         correct += (preds == y_batch).sum().item()
         total += y_batch.size(0)
 
-    epoch_loss = running_loss / total
+    epoch_loss = running_loss / total if total > 0 else 0.0
     epoch_acc = correct / total if total > 0 else 0.0
     return epoch_loss, epoch_acc
-
 
 def validate_epoch(
     model: nn.Module,
@@ -151,7 +147,7 @@ def validate_epoch(
             correct += (preds == y_batch).sum().item()
             total += y_batch.size(0)
 
-    epoch_loss = running_loss / total
+    epoch_loss = running_loss / total if total > 0 else 0.0
     epoch_acc = correct / total if total > 0 else 0.0
     return epoch_loss, epoch_acc
 
@@ -167,16 +163,20 @@ def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
 
+    meta = load_meta(config.DATA_DIR)
+    class_map = meta.get("class_map", {})
+    num_classes = len(class_map) if isinstance(class_map, dict) and len(class_map) > 0 else None
+    if num_classes is None:
+        raise ValueError("meta.json does not contain a valid class_map")
+
     X_train, y_train, X_val, y_val = load_train_val_data(config.DATA_DIR)
 
-    input_size = X_train.shape[2]
-    num_classes = int(np.max(y_train)) + 1
-
+    input_size = int(X_train.shape[2])
     model = LSTMFlagClassifier(
         input_size=input_size,
         hidden_size=32,
         num_layers=1,
-        num_classes=num_classes,
+        num_classes=int(num_classes),
         dropout=0.1,
     ).to(device)
 
@@ -196,14 +196,10 @@ def train():
     model_dir = os.path.dirname(config.MODEL_SAVE_PATH)
     if model_dir:
         os.makedirs(model_dir, exist_ok=True)
-    
+
     for epoch in range(1, config.EPOCHS + 1):
-        train_loss, train_acc = train_one_epoch(
-            model, train_loader, criterion, optimizer, device
-        )
-        val_loss, val_acc = validate_epoch(
-            model, val_loader, criterion, device
-        )
+        train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, device)
+        val_loss, val_acc = validate_epoch(model, val_loader, criterion, device)
 
         logger.info(
             f"Epoch {epoch}/{config.EPOCHS} "
