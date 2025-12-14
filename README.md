@@ -59,6 +59,7 @@ The repository is structured as follows:
     - `run.log`: Example log file showing the output of a successful training run.
 
 - **Root Directory**:
+    - `.gitattributes`: Git configuration file used to enforce consistent file formatting across operating systems.
     - `.gitignore`: Prevents logs, environment-specific files and directories from being published to the repository.
     - `Dockerfile`: Configuration file for building the Docker image with the necessary environment and dependencies.
     - `requirements.txt`: List of Python dependencies required for the project.
