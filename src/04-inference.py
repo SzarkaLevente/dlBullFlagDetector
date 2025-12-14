@@ -1,5 +1,4 @@
 import os
-import json
 import random
 from typing import List
 
@@ -9,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import config as config
-from utils import setup_logger
+from utils import setup_logger, load_meta
 
 logger = setup_logger()
 
@@ -45,21 +44,10 @@ class LSTMFlagClassifier(nn.Module):
         logits = self.fc(last_hidden)
         return logits
 
-def load_meta_and_class_map(data_dir: str):
-    processed_dir = os.path.join(data_dir, "processed")
-    meta_path = os.path.join(processed_dir, "meta.json")
-
-    if not os.path.exists(meta_path):
-        logger.warning(f"meta.json not found at {meta_path}. "
-                       "Class names will be shown as numeric ids only.")
-        return None, None
-
-    with open(meta_path, "r") as f:
-        meta = json.load(f)
-
-    class_map = meta.get("class_map", {})
-    idx_to_label = {int(v): k for k, v in class_map.items()}
-    return meta, idx_to_label
+def class_names_from_map(class_map: dict) -> List[str]:
+    inv = {int(v): str(k) for k, v in class_map.items()}
+    n = len(inv)
+    return [inv.get(i, f"class_{i}") for i in range(n)]
 
 def load_example_data(data_dir: str) -> np.ndarray:
     processed_dir = os.path.join(data_dir, "processed")
@@ -86,27 +74,26 @@ def predict():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
 
-    meta, idx_to_label = load_meta_and_class_map(config.DATA_DIR)
+    meta = load_meta(config.DATA_DIR)
+    if meta is None or "class_map" not in meta or not isinstance(meta["class_map"], dict) or len(meta["class_map"]) == 0:
+        logger.error("meta.json missing or invalid. Run preprocessing first.")
+        return
+
+    class_names = class_names_from_map(meta["class_map"])
+    num_classes = len(class_names)
 
     X_test = load_example_data(config.DATA_DIR)
-
     if X_test.shape[0] == 0:
         logger.error("X_test is empty. Nothing to predict on.")
         return
 
-    input_size = X_test.shape[2]
-    if meta is not None and "class_map" in meta:
-        num_classes = len(meta["class_map"])
-    else:
-        logger.warning("Could not determine num_classes from meta.json, "
-                       "defaulting to 6.")
-        num_classes = 6
+    input_size = int(X_test.shape[2])
 
     model = LSTMFlagClassifier(
         input_size=input_size,
         hidden_size=32,
         num_layers=1,
-        num_classes=num_classes,
+        num_classes=int(num_classes),
         dropout=0.1,
     ).to(device)
 
@@ -122,7 +109,7 @@ def predict():
     model.load_state_dict(state_dict)
     model.eval()
 
-    sample_indices = choose_sample_indices(n_samples=5, max_index=X_test.shape[0])
+    sample_indices = choose_sample_indices(n_samples=5, max_index=int(X_test.shape[0]))
     logger.info(f"Running inference on sample indices: {sample_indices}")
 
     X_samples = X_test[sample_indices]
@@ -139,19 +126,15 @@ def predict():
     for i, idx in enumerate(sample_indices):
         pred_class = int(preds_np[i])
         prob_vec = probs_np[i]
-
-        if idx_to_label is not None and pred_class in idx_to_label:
-            pred_label_name = idx_to_label[pred_class]
-        else:
-            pred_label_name = f"class_{pred_class}"
-
+        pred_label_name = class_names[pred_class] if 0 <= pred_class < len(class_names) else f"class_{pred_class}"
         top_prob = float(prob_vec[pred_class])
 
         logger.info(
             f"Sample {idx}: predicted class={pred_class} "
             f"({pred_label_name}), confidence={top_prob:.4f}, "
-            f"full_probs={prob_vec.round(4).tolist()}"
+            f"full_probs={np.round(prob_vec, 4).tolist()}"
         )
+
     logger.info("=== Inference completed ===")
 
 if __name__ == "__main__":
