@@ -119,7 +119,7 @@ def evaluate():
     cm = confusion_matrix(y_true, y_pred)
     logger.info(f"Confusion matrix:\n{cm}")
 
-    report = classification_report(y_true, y_pred, digits=4)
+    report = classification_report(y_true, y_pred, digits=4, zero_division=0)
     logger.info(f"Classification report:\n{report}")
 
     logger.info("=== Evaluation on test set completed ===")

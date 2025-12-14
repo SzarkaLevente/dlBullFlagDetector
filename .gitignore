@@ -9,12 +9,6 @@ venv/
 env/
 .venv/
 .ipynb_checkpoints/
-log/*.log
-log/*.txt
-*.log
-data/
-*.csv
-*.json
 *.xlsx
 *.zip
 prepared_data/
@@ -30,3 +24,4 @@ Desktop.ini
 .idea/
 docker-build/
 .cache/
+processed/

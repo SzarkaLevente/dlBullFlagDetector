@@ -1,4 +1,39 @@
-# Deep Learning Class (VITMMA19) – Project Work
+# Deep Learning Class (VITMMA19) Project Work template
+
+[Complete the missing parts and delete the instruction parts before uploading.]
+
+## Submission Instructions
+
+### Data Preparation
+
+**Important:** You must provide a script (or at least a precise description) of how to convert the raw database into a format that can be processed by the scripts.
+* The scripts should ideally download the data from there or process it directly from the current sharepoint location.
+* Or if you do partly manual preparation, then it is recommended to upload the prepared data format to a shared folder and access from there.
+
+[Describe the data preparation process here]
+
+### Submission Checklist
+
+Before submitting your project, ensure you have completed the following steps.
+**Please note that the submission can only be accepted if these minimum requirements are met.**
+
+- [x] **Project Information**: Filled out the "Project Information" section (Topic, Name, Extra Credit).
+- [ ] **Solution Description**: Provided a clear description of your solution, model, and methodology.
+- [x] **Extra Credit**: If aiming for +1 mark, filled out the justification section.
+- [ ] **Data Preparation**: Included a script or precise description for data preparation.
+- [x] **Dependencies**: Updated `requirements.txt` with all necessary packages and specific versions.
+- [x] **Configuration**: Used `src/config.py` for hyperparameters and paths, contains at least the number of epochs configuration variable.
+- [x] **Logging**:
+    - [x] Log uploaded to `log/run.log`
+    - [x] Log contains: Hyperparameters, Data preparation and loading confirmation, Model architecture, Training metrics (loss/acc per epoch), Validation metrics, Final evaluation results, Inference results.
+- [x] **Docker**:
+    - [x] `Dockerfile` is adapted to your project needs.
+    - [x] Image builds successfully (`docker build -t dl-project .`).
+    - [x] Container runs successfully with data mounted (`docker run ...`).
+    - [x] The container executes the full pipeline (preprocessing, training, evaluation).
+- [x] **Cleanup**:
+    - [x] Removed unused files.
+    - [x] **Deleted this "Submission Instructions" section from the README.**
 
 ## Project Details
 
@@ -6,7 +41,6 @@
 
 - **Selected Topic**: Bull-flag detector
 - **Student Name**: Szarka Levente
-- **Student Neptun-Code**: JRG6JB
 - **Aiming for +1 Mark**: No
 
 ### Solution Description
@@ -37,17 +71,14 @@ To run the solution, use the following command. You must mount your local data d
 **To capture the logs for submission (required), redirect the output to a file:**
 
 ```bash
-docker run -v /absolute/path/to/your/local/data:/app/data dl-project > log/run.log 2>&1
+docker run -v "$(pwd)/data:/app/data" dl-project > log/run.log 2>&1
 ```
 
-*   Replace `/absolute/path/to/your/local/data` with the actual path to your dataset on your host machine that meets the [Data preparation requirements](#data-preparation).
 *   The `> log/run.log 2>&1` part ensures that all output (standard output and errors) is saved to `log/run.log`.
 *   The container is configured to run every step (data preprocessing, training, evaluation, inference).
 
 
 ### File Structure and Functions
-
-[Update according to the final file structure.]
 
 The repository is structured as follows:
 
@@ -60,13 +91,14 @@ The repository is structured as follows:
     - `utils.py`: Helper functions and utilities used across different scripts.
 
 - **`notebook/`**: Contains Jupyter notebooks for analysis and experimentation.
-    - `01-data-exploration.ipynb`: Notebook for initial exploratory data analysis (EDA) and visualization.
-    - `02-label-analysis.ipynb`: Notebook for analyzing the distribution and properties of the target labels.
+    - yet to fill out
 
 - **`log/`**: Contains log files.
     - `run.log`: Example log file showing the output of a successful training run.
 
 - **Root Directory**:
+    - `.gitignore`: Prevents logs, environment-specific files and directories from being published to the repository.
     - `Dockerfile`: Configuration file for building the Docker image with the necessary environment and dependencies.
     - `requirements.txt`: List of Python dependencies required for the project.
     - `README.md`: Project documentation and instructions.
+    - `run.sh`: The shell script that imitates the pipeline.
