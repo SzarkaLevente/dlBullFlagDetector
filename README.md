@@ -21,7 +21,6 @@ Evaluation is performed on a held-out test set using standard classification met
 ### Docker Instructions
 
 This project is containerized using Docker. Follow the instructions below to build and run the solution.
-[Adjust the commands that show how do build your container and run it with log output.]
 
 #### Build
 
@@ -55,9 +54,6 @@ The repository is structured as follows:
     - `04-inference.py`: Script for running the model on new, unseen data to generate predictions.
     - `config.py`: Configuration file containing hyperparameters (e.g., epochs) and paths.
     - `utils.py`: Helper functions and utilities used across different scripts.
-
-- **`notebook/`**: Contains Jupyter notebooks for analysis and experimentation.
-    - yet to fill out
 
 - **`log/`**: Contains log files.
     - `run.log`: Example log file showing the output of a successful training run.

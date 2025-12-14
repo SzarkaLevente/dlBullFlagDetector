@@ -6,7 +6,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
-COPY notebook/ notebook/
 COPY run.sh run.sh
 
 RUN mkdir -p /app/data
