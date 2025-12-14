@@ -1,40 +1,5 @@
 # Deep Learning Class (VITMMA19) Project Work template
 
-[Complete the missing parts and delete the instruction parts before uploading.]
-
-## Submission Instructions
-
-### Data Preparation
-
-**Important:** You must provide a script (or at least a precise description) of how to convert the raw database into a format that can be processed by the scripts.
-* The scripts should ideally download the data from there or process it directly from the current sharepoint location.
-* Or if you do partly manual preparation, then it is recommended to upload the prepared data format to a shared folder and access from there.
-
-[Describe the data preparation process here]
-
-### Submission Checklist
-
-Before submitting your project, ensure you have completed the following steps.
-**Please note that the submission can only be accepted if these minimum requirements are met.**
-
-- [x] **Project Information**: Filled out the "Project Information" section (Topic, Name, Extra Credit).
-- [ ] **Solution Description**: Provided a clear description of your solution, model, and methodology.
-- [x] **Extra Credit**: If aiming for +1 mark, filled out the justification section.
-- [ ] **Data Preparation**: Included a script or precise description for data preparation.
-- [x] **Dependencies**: Updated `requirements.txt` with all necessary packages and specific versions.
-- [x] **Configuration**: Used `src/config.py` for hyperparameters and paths, contains at least the number of epochs configuration variable.
-- [x] **Logging**:
-    - [x] Log uploaded to `log/run.log`
-    - [x] Log contains: Hyperparameters, Data preparation and loading confirmation, Model architecture, Training metrics (loss/acc per epoch), Validation metrics, Final evaluation results, Inference results.
-- [x] **Docker**:
-    - [x] `Dockerfile` is adapted to your project needs.
-    - [x] Image builds successfully (`docker build -t dl-project .`).
-    - [x] Container runs successfully with data mounted (`docker run ...`).
-    - [x] The container executes the full pipeline (preprocessing, training, evaluation).
-- [x] **Cleanup**:
-    - [x] Removed unused files.
-    - [x] **Deleted this "Submission Instructions" section from the README.**
-
 ## Project Details
 
 ### Project Information
@@ -45,11 +10,13 @@ Before submitting your project, ensure you have completed the following steps.
 
 ### Solution Description
 
-[Provide a short textual description of the solution here. Explain the problem, the model architecture chosen, the training methodology, and the results.]
+This project implements a deep learning–based pipeline for detecting and classifying bullish and bearish flag-type chart patterns from financial time-series data. The goal is to demonstrate an end-to-end machine learning workflow, including data preparation, model training, evaluation, and inference, rather than to achieve state-of-the-art predictive performance.
 
-### Extra Credit Justification
+The input data consists of OHLC (open, high, low, close) price sequences extracted from labeled time intervals. During preprocessing, labeled segments are aligned with raw price data, normalized per segment, and padded or truncated to a fixed sequence length. The resulting dataset is split into training, validation, and test sets in a reproducible manner.
 
-[If you selected "Yes" for Aiming for +1 Mark, describe here which specific part of your work (e.g., innovative model architecture, extensive experimentation, exceptional performance) you believe deserves an extra mark.]
+As a baseline deep learning model, a single-layer LSTM (Long Short-Term Memory) network is used. The LSTM processes each price sequence and outputs a fixed-length hidden representation, which is passed to a fully connected layer to perform multi-class classification of chart patterns. The model is trained using cross-entropy loss and the Adam optimizer, with early stopping based on validation loss to prevent overfitting.
+
+Evaluation is performed on a held-out test set using standard classification metrics, including accuracy, confusion matrix, and precision/recall/F1 scores. Due to the small size and imbalance of the dataset, the quantitative results are limited and not intended for practical trading use. However, the system successfully demonstrates correct model behavior, reproducible training, and a fully containerized workflow. Inference is supported on unseen sequences, producing class probabilities and confidence scores.
 
 ### Docker Instructions
 
@@ -76,7 +43,6 @@ docker run -v "$(pwd)/data:/app/data" dl-project > log/run.log 2>&1
 
 *   The `> log/run.log 2>&1` part ensures that all output (standard output and errors) is saved to `log/run.log`.
 *   The container is configured to run every step (data preprocessing, training, evaluation, inference).
-
 
 ### File Structure and Functions
 
